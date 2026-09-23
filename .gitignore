@@ -21,3 +21,4 @@ harvest_output/
 .env
 kaggle.json
 access_token
+*.swp
