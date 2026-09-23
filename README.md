@@ -166,17 +166,6 @@ ruff check . && ruff format --check .
 mypy
 ```
 
-## Roadmap
-
-- [x] Relevance scoring against topic keywords
-- [x] Thread discovery through the official API
-- [ ] Measure the relevance filter's precision against hand-labelled results
-- [ ] Provenance checks: `userSpecifiedSources` and "originally from" in descriptions
-- [ ] Near-duplicate detection (MinHash) against older public corpora
-- [ ] Draft benchmark tasks from kept datasets and their discussion edge cases
-- [ ] Kaggle competitions and Hugging Face Hub as further sources
-- [ ] Run manifest (SQLite) so runs are resumable and incremental
-
 ## License
 
 [MIT](LICENSE)
