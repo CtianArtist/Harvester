@@ -1,5 +1,5 @@
 """
-Kaggle Benchmark Data Harvester (starter script)
+The Karvester: a Kaggle dataset harvester for AI benchmarks.
 
 Finds recent, niche STEM datasets on Kaggle that AI models are unlikely to have
 seen during training, and saves them as "candidate" records that can later be
