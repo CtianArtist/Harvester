@@ -1,0 +1,38 @@
+# Harvester settings. Every key is optional; anything left out uses the
+# built-in default (these values). Copy this file, edit it, and run:
+#   harvester run --config my-settings.yaml
+
+topics:
+  - linear algebra
+  - signal processing
+  - optimization
+  - reinforcement learning
+
+# Anything dated before this is quarantined. Set it to at least the training
+# cutoff of the newest model you plan to test, and move it forward over time.
+cutoff: 2026-06-01
+
+per_topic: 5 # search results to check per topic (1-20)
+
+# License name parts that get a dataset quarantined, matched as whole words.
+# Add UNKNOWN to also reject datasets with no license.
+blocked_licenses: [NC, ND]
+
+output_dir: data
+
+download:
+  max_file_mb: 200 # skip any single file bigger than this (after unzipping)
+  max_dataset_mb: 500 # skip datasets bigger than this, and stop downloading past it
+
+scrape:
+  threads_per_dataset: 3
+  max_chars_per_thread: 5000
+  pages_at_once: 2 # browser tabs loading at the same time (keep small to be polite)
+  seconds_between_pages: 2.0
+  page_timeout_ms: 30000
+  wait_for_content_ms: 15000
+  show_browser: false # true opens a visible window so you can watch it work
+  # Which parts of a thread page to save. If Kaggle changes its layout, run
+  # `playwright codegen <a thread's URL>`, click the post, and copy the selector.
+  thread_text_selector: '[data-testid="discussion-detail-render-tid"]'
+  thread_title_selector: '[data-testid="discussions-topic-header"] h3'
