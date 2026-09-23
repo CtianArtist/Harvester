@@ -1,5 +1,9 @@
 # Harvester
 
+[![CI](https://github.com/CtianArtist/Harvester/actions/workflows/ci.yml/badge.svg)](https://github.com/CtianArtist/Harvester/actions/workflows/ci.yml)
+![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue)
+![License: MIT](https://img.shields.io/badge/license-MIT-green)
+
 Collects **recent, niche STEM datasets** for building AI coding benchmarks that
 models can't have memorized.
 
@@ -53,6 +57,41 @@ discover ─► prefilter ─► list files ─► assess ─────► dow
 Dates are a strong signal, not proof: someone can upload years-old data as a
 brand-new dataset. Near-duplicate detection against known corpora is on the
 roadmap for that reason.
+
+## Example run
+
+A live dates-and-relevance run (September 2026), trimmed:
+
+```
+$ harvester run --no-download --no-scrape
+Searching 4 topic(s) on kaggle, newest first
+Checking 20 dataset(s) against the 2026-06-01 cutoff
+  KEPT        kushalsathe/linear-algebra: oldest date found is 2026-09-01
+  QUARANTINED manjhi7/bengaluru-school-college-ngo-mapping: RELEVANCE: 'linear algebra' scored 2 of 3 needed (only linear algebra, matrices in the description)
+  QUARANTINED beydatasar/sleep-postion-detection-via-imu-based-dataset: LICENSE: CC BY-NC-SA 4.0 (NC not allowed)
+  KEPT        shasandeep27/respiratory-bioz-asthma-dataset: oldest date found is 2026-09-14
+  QUARANTINED abdurrahmanhakanacar/formula-1-2024-2025-laps-strategy-and-telemetry: RELEVANCE: 'optimization' scored 1 of 3 needed (only optimization in the description)
+  KEPT        beamhonor0911/kaggriculture-episodes-data: oldest date found is 2026-09-22
+  ...
+Done: 10 kept, 10 quarantined. Results are in data/
+```
+
+## What live runs taught me
+
+Each of these passed the offline tests and only showed up against the real
+service:
+
+- **Kaggle's `topic_count` is always 0.** Even for `uciml/iris`, which has 33
+  threads. Trusting it would have silently skipped every dataset's discussions.
+  Real counts now come from `dataset_list_topics`.
+- **"The description mentions the topic" proves nothing.** Search returns
+  datasets *because* their description contains the query, so a keyword check
+  on the description always passes. Hence the weighted relevance score.
+- **The thread page has no `<main>` element.** The first scraper silently fell
+  back to the whole page and saved menus and the cookie banner as "discussion".
+  It now targets Kaggle's `data-testid` attributes and warns when they vanish.
+- **`/robots.txt` returns the home page.** HTTP 200, HTML. Parsing it as rules
+  only "worked" by accident, so non-text responses are handled explicitly.
 
 ## Quick start
 
@@ -129,10 +168,15 @@ mypy
 
 ## Roadmap
 
-- [ ] Run manifest (SQLite) so runs are resumable and incremental
-- [ ] Near-duplicate detection (MinHash) against older public corpora
-- [ ] Recorded Kaggle discussion pages as test fixtures
 - [x] Relevance scoring against topic keywords
 - [x] Thread discovery through the official API
-- [ ] Second source (Hugging Face Hub) to prove the source interface
-- [ ] Cutoff presets per model (`--cutoff-model ...`)
+- [ ] Measure the relevance filter's precision against hand-labelled results
+- [ ] Provenance checks: `userSpecifiedSources` and "originally from" in descriptions
+- [ ] Near-duplicate detection (MinHash) against older public corpora
+- [ ] Draft benchmark tasks from kept datasets and their discussion edge cases
+- [ ] Kaggle competitions and Hugging Face Hub as further sources
+- [ ] Run manifest (SQLite) so runs are resumable and incremental
+
+## License
+
+[MIT](LICENSE)
