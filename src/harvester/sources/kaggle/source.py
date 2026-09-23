@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import contextlib
+import io
 from pathlib import Path
 from typing import Any
 
@@ -46,7 +48,9 @@ class KaggleSource:
         return files
 
     def download_file(self, ref: str, name: str, dest_dir: Path) -> None:
-        self.api.dataset_download_file(ref, name, path=str(dest_dir), force=True, quiet=True)
+        # quiet=True still prints "Dataset URL: ..." for every file, so hide it.
+        with contextlib.redirect_stdout(io.StringIO()):
+            self.api.dataset_download_file(ref, name, path=str(dest_dir), force=True, quiet=True)
 
 
 def to_listing(ds: Any) -> Listing:
@@ -62,7 +66,10 @@ def to_listing(ds: Any) -> Listing:
             v.creation_date for v in (ds.versions or []) if v is not None and v.creation_date
         ],
         license=ds.license_name or None,
-        discussion_count=ds.topic_count,
+        # Not ds.topic_count: the search API always reports 0 there (checked in
+        # September 2026 against uciml/iris, which has 33 threads), so trusting
+        # it would skip the discussions of every dataset.
+        discussion_count=None,
     )
 
 

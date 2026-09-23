@@ -30,7 +30,7 @@ def test_to_listing_converts_and_cleans_fields():
     assert listing.last_updated == datetime(2026, 7, 1, tzinfo=UTC)
     assert listing.version_dates == [datetime(2026, 6, 20, tzinfo=UTC)]
     assert listing.license == "CC0-1.0"
-    assert listing.discussion_count == 4
+    assert listing.discussion_count is None  # the API's topic_count is always 0
 
 
 def test_to_listing_handles_missing_fields():
