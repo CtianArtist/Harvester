@@ -10,7 +10,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Protocol
 
-from harvester.models import Listing, RemoteFile
+from harvester.models import Details, Listing, RemoteFile, ThreadIndex
 
 
 class DatasetSource(Protocol):
@@ -26,4 +26,12 @@ class DatasetSource(Protocol):
 
     def download_file(self, ref: str, name: str, dest_dir: Path) -> None:
         """Download one file into `dest_dir`. It may arrive zipped."""
+        ...
+
+    def details(self, ref: str) -> Details:
+        """Return the description and keywords that search results leave out."""
+        ...
+
+    def list_threads(self, ref: str, limit: int) -> ThreadIndex:
+        """Return up to `limit` discussion threads (without their text) and the total count."""
         ...

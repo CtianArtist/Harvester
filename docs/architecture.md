@@ -13,9 +13,11 @@ or rejected.
 | Discover | `sources/<name>/source.py` → `search` | API | no |
 | Prefilter | `contamination/verdict.py` → `prefilter` | no | date, license |
 | List files | `sources/<name>/source.py` → `list_files` | API | on API error |
-| Assess | `contamination/verdict.py` → `assess` | no | oldest date |
+| Describe | `sources/<name>/source.py` → `details` (only if the headline isn't on topic) | API | no |
+| Assess | `contamination/verdict.py` → `assess` | no | oldest date, relevance |
 | Download | `download.py` + `guards/size.py` | API | per file, by size |
-| Enrich | `enrichment/discussions.py` | browser | no |
+| List threads | `sources/<name>/source.py` → `list_threads` | API | no |
+| Read threads | `enrichment/discussions.py` (only if any kept dataset has threads) | browser | no |
 | Save | `storage/output.py` | no | no |
 
 Stages are ordered by cost: the checks that need nothing but the search
@@ -29,13 +31,13 @@ a `Verdict`; they never do I/O. The contamination rules can be tested
 exhaustively without a network and explained line by line.
 
 **Sources sit behind a protocol.** The pipeline only knows `DatasetSource`
-(`search`, `list_files`, `download_file`). Kaggle-specific types are converted
+(`search`, `list_files`, `download_file`, `details`, `list_threads`). Kaggle types are converted
 to `Listing` and `RemoteFile` at the edge (`sources/kaggle/source.py`), so the
 rest of the code never imports `kaggle`. Tests run the whole pipeline against a
 `FakeSource`.
 
 **Every rejection carries a reason.** Reasons are prefixed with the check that
-produced them (`TEMPORAL:`, `LICENSE:`, `SOURCE:`) and all of them are kept,
+produced them (`TEMPORAL:`, `LICENSE:`, `RELEVANCE:`, `SOURCE:`) and all of them are kept,
 not just the first, so a quarantine file can be audited or re-filtered later.
 
 **Fail per item, not per run.** A failed search, file listing, download or
@@ -45,7 +47,10 @@ browser session is recorded on the affected dataset and the run continues.
 
 - Dates are evidence, not proof: an old dataset re-uploaded as new passes the
   temporal check. Near-duplicate detection is the planned answer.
-- Discussion scraping depends on Kaggle's page structure. The selectors are
-  settings, not code, and were last checked in September 2026.
+- Reading thread text depends on Kaggle's page structure. The selector is a
+  setting, not code, was last checked in September 2026, and a run warns when
+  it stops matching. Finding threads does not: that uses the official API.
+- Relevance trusts the dataset owner's title and tags. A dataset tagged with a
+  topic it isn't really about still scores as strong evidence.
 - Each run overwrites the JSONL output. A SQLite manifest (planned) will make
   runs incremental.

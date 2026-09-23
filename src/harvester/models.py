@@ -34,12 +34,12 @@ class Listing(BaseModel):
     ref: str  # "owner/dataset-name"
     title: str
     url: str
+    subtitle: str = ""
     tags: list[str] = Field(default_factory=list)
     total_bytes: int = 0
     last_updated: datetime | None = None
     version_dates: list[datetime] = Field(default_factory=list)
     license: str | None = None
-    discussion_count: int | None = None  # None means the source didn't say
 
     @field_validator("last_updated")
     @classmethod
@@ -50,6 +50,13 @@ class Listing(BaseModel):
     @classmethod
     def all_to_utc(cls, dates: list[datetime]) -> list[datetime]:
         return [d for d in map(as_utc, dates) if d is not None]
+
+
+class Details(BaseModel):
+    """Text about a dataset that search results leave out, fetched only when needed."""
+
+    description: str = ""
+    keywords: list[str] = Field(default_factory=list)
 
 
 class Status(StrEnum):
@@ -63,6 +70,7 @@ class Verdict(BaseModel):
     status: Status
     reasons: list[str]
     earliest_date: datetime | None = None
+    matched_keywords: list[str] = Field(default_factory=list)
 
     @classmethod
     def quarantine(cls, *reasons: str) -> Verdict:
@@ -81,9 +89,27 @@ class SkippedFile(BaseModel):
 
 
 class Thread(BaseModel):
+    """A discussion thread. The source lists it; the browser fills in `text`."""
+
     url: str
     title: str
-    text: str
+    posted_at: datetime | None = None
+    author: str | None = None
+    comment_count: int = 0
+    votes: int = 0
+    text: str = ""
+
+    @field_validator("posted_at")
+    @classmethod
+    def to_utc(cls, dt: datetime | None) -> datetime | None:
+        return as_utc(dt)
+
+
+class ThreadIndex(BaseModel):
+    """One page of a dataset's threads, plus how many there are in total."""
+
+    total: int
+    threads: list[Thread]
 
 
 class Candidate(BaseModel):
@@ -97,10 +123,11 @@ class Candidate(BaseModel):
     license: str | None
     listed_size_mb: float
     last_updated: datetime | None
-    discussion_count: int | None = None
+    discussion_count: int | None = None  # None until the source has been asked
     earliest_date_seen: datetime | None = None
     status: Status | None = None
     reasons: list[str] = Field(default_factory=list)
+    matched_keywords: list[str] = Field(default_factory=list)
     files_downloaded: list[SavedFile] = Field(default_factory=list)
     files_skipped: list[SkippedFile] = Field(default_factory=list)
     discussions: list[Thread] = Field(default_factory=list)
@@ -119,7 +146,6 @@ class Candidate(BaseModel):
             license=listing.license,
             listed_size_mb=mb(listing.total_bytes),
             last_updated=listing.last_updated,
-            discussion_count=listing.discussion_count,
         )
 
     @property
@@ -130,3 +156,4 @@ class Candidate(BaseModel):
         self.status = verdict.status
         self.reasons = verdict.reasons
         self.earliest_date_seen = verdict.earliest_date
+        self.matched_keywords = verdict.matched_keywords

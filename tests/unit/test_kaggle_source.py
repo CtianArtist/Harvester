@@ -1,6 +1,8 @@
 """The Kaggle adapter, tested against stand-ins shaped like kagglesdk objects."""
 
+import json
 from datetime import UTC, datetime
+from pathlib import Path
 from types import SimpleNamespace as NS
 
 import pytest
@@ -12,6 +14,7 @@ def api_dataset(**kw):
     fields = {
         "ref": "alice/data",
         "title": "Data",
+        "subtitle": "Radar sweeps",
         "tags": [NS(name="signal processing"), None, NS(name="")],
         "total_bytes": 2048,
         "last_updated": datetime(2026, 7, 1),  # naive, like the real API
@@ -29,13 +32,16 @@ def test_to_listing_converts_and_cleans_fields():
     assert listing.tags == ["signal processing"]
     assert listing.last_updated == datetime(2026, 7, 1, tzinfo=UTC)
     assert listing.version_dates == [datetime(2026, 6, 20, tzinfo=UTC)]
+    assert listing.subtitle == "Radar sweeps"
     assert listing.license == "CC0-1.0"
-    assert listing.discussion_count is None  # the API's topic_count is always 0
 
 
 def test_to_listing_handles_missing_fields():
-    listing = to_listing(api_dataset(title=None, tags=None, versions=None, license_name=""))
+    listing = to_listing(
+        api_dataset(title=None, subtitle=None, tags=None, versions=None, license_name="")
+    )
     assert listing.title == "alice/data"
+    assert listing.subtitle == ""
     assert listing.tags == []
     assert listing.version_dates == []
     assert listing.license is None
@@ -52,6 +58,22 @@ class FakeApi:
 
     def dataset_list_files(self, ref, page_token=None, page_size=20):
         return self.pages[page_token]
+
+    def dataset_metadata(self, ref, path):
+        out = Path(path) / "dataset-metadata.json"
+        out.write_text(json.dumps({"info": {"description": "FFT data", "keywords": ["dsp", ""]}}))
+        return str(out)
+
+    def dataset_list_topics(self, ref, page_size=None):
+        topic = NS(
+            url="/datasets/a/b/discussion/1",
+            title="Units?",
+            post_date=datetime(2026, 7, 2),
+            author_name="bo",
+            comment_count=4,
+            votes=2,
+        )
+        return NS(topics=[topic, NS(url="", title="no link")], total_count=33)
 
 
 def page(names, next_token=None, error=None):
@@ -75,3 +97,18 @@ def test_list_files_raises_on_api_error():
     api = FakeApi({None: page([], error="Dataset not found")})
     with pytest.raises(RuntimeError, match="Dataset not found"):
         KaggleSource(api).list_files("x/y")
+
+
+def test_details_reads_the_metadata_file():
+    details = KaggleSource(FakeApi({})).details("a/b")
+    assert details.description == "FFT data"
+    assert details.keywords == ["dsp"]
+
+
+def test_list_threads_uses_the_real_total_and_absolute_urls():
+    index = KaggleSource(FakeApi({})).list_threads("a/b", limit=50)
+    assert index.total == 33
+    assert [t.url for t in index.threads] == ["https://www.kaggle.com/datasets/a/b/discussion/1"]
+    thread = index.threads[0]
+    assert (thread.comment_count, thread.author) == (4, "bo")
+    assert thread.posted_at == datetime(2026, 7, 2, tzinfo=UTC)

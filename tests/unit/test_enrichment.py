@@ -1,4 +1,4 @@
-from harvester.enrichment.discussions import normalize_thread_urls, strip_icon_labels
+from harvester.enrichment.discussions import strip_icon_labels
 from harvester.enrichment.hints import find_edge_case_hints
 from harvester.enrichment.robots import parse_robots
 from harvester.models import Thread
@@ -26,17 +26,6 @@ def test_hints_skip_short_and_duplicate_sentences_and_respect_the_limit():
     assert find_edge_case_hints([t, t]) == ["This row is wrong and should be fixed."]
     many = thread("\n".join(f"Row {i} has a missing value here." for i in range(20)))
     assert len(find_edge_case_hints([many], limit=5)) == 5
-
-
-def test_thread_urls_are_cleaned_and_deduplicated():
-    hrefs = [
-        f"{BASE}/123?sort=new",
-        f"{BASE}/123#comment-9",
-        f"{BASE}/456/",
-        f"{BASE}?sort=hotness",  # the list page itself, not a thread
-        "https://www.kaggle.com/datasets/alice/data",
-    ]
-    assert normalize_thread_urls(hrefs) == [f"{BASE}/123", f"{BASE}/456"]
 
 
 def test_robots_404_means_no_rules():

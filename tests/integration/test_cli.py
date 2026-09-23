@@ -10,7 +10,7 @@ runner = CliRunner()
 
 def test_run_uses_cli_overrides(tmp_path, monkeypatch):
     source = FakeSource(
-        listings={"optimization": [make_listing("a/b")]},
+        listings={"optimization": [make_listing("a/b", title="Optimization runs")]},
         files={"a/b": [RemoteFile(name="f.csv", total_bytes=1, creation_date=NEW)]},
     )
     monkeypatch.setattr(cli.KaggleSource, "connect", classmethod(lambda cls: source))

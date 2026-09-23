@@ -17,11 +17,11 @@ record of every decision it makes.
 ## What it does
 
 ```
-discover ──► prefilter ──► list files ──► assess ──► download ──► enrich ──► save
- (search,     (date and      (sizes and     (oldest     (size-      (discussion  (accepted /
-  newest       license,       creation       date wins)  bounded,    threads,     quarantine
-  first)       no extra       dates)                     zip-bomb    edge-case    + reasons)
-               API calls)                                 safe)       hints)
+discover ─► prefilter ─► list files ─► assess ─────► download ─► threads ─► read ──► save
+(search,    (date and    (sizes and    (oldest date, (size-      (API: real  (browser: (accepted /
+ newest      license,     creation      on-topic     bounded,    count,      text of   quarantine
+ first)      no extra     dates)        score)       zip-bomb    busiest     picked    + reasons)
+             API calls)                              safe)       first)      threads)
 ```
 
 - **Temporal filtering.** Anything dated before the cutoff is quarantined. A
@@ -29,16 +29,26 @@ discover ──► prefilter ──► list files ──► assess ──► dow
   so an old dataset with a fresh upload doesn't slip through.
 - **License guard.** Non-commercial or no-derivatives licenses are quarantined
   up front (configurable), because benchmark data has to be redistributable.
+- **Relevance scoring.** Kaggle's search returns anything whose description
+  mentions the search words, so a map of schools that lists "linear algebra"
+  among subjects taught comes back for "linear algebra". Keywords in the title,
+  subtitle or tags score 3 points; keywords only in the description score 1.
+  A dataset needs 3. On a live run this cut 20 search results to 10, removing
+  the school map, an F1 telemetry set and generic math Q&A.
 - **Bounded downloads.** File and dataset size caps are checked against the
   listed size before downloading, then against the real size after. Zip
   archives are measured from their index *before* extraction.
-- **Discussion enrichment.** Kaggle's API doesn't expose discussions and its
-  pages are drawn with JavaScript, so a headless browser (Playwright) reads
-  them, slowly and a few tabs at a time. Sentences that warn about traps in the
-  data are pulled out as edge-case hints.
+- **Discussion enrichment.** The official API lists each dataset's threads
+  (real count, titles, dates, comment counts), and the busiest few are picked.
+  The API doesn't return what threads say, and Kaggle draws its pages with
+  JavaScript, so a headless browser (Playwright) reads just those threads,
+  slowly and a few tabs at a time. It never starts if no kept dataset has
+  threads. Sentences that warn about traps in the data are pulled out as
+  edge-case hints.
 - **Every quarantine has a reason**, such as
   `TEMPORAL: updated recently, but parts of it date back to 2023-03-10` or
-  `LICENSE: CC-BY-NC-4.0 (NC not allowed)`.
+  `LICENSE: CC-BY-NC-4.0 (NC not allowed)` or
+  `RELEVANCE: 'optimization' scored 1 of 3 needed (only optimization in the description)`.
 
 Dates are a strong signal, not proof: someone can upload years-old data as a
 brand-new dataset. Near-duplicate detection against known corpora is on the
@@ -94,8 +104,9 @@ src/harvester/
   guards/
     size.py               pre/post-download size checks, zip-bomb safe
     license.py
+    relevance.py          weighted on-topic scoring
   enrichment/
-    discussions.py        Playwright discussion reader
+    discussions.py        Playwright reader for thread text
     robots.py             robots.txt handling
     hints.py              edge-case sentence extraction
   storage/output.py       on-disk layout
@@ -121,5 +132,7 @@ mypy
 - [ ] Run manifest (SQLite) so runs are resumable and incremental
 - [ ] Near-duplicate detection (MinHash) against older public corpora
 - [ ] Recorded Kaggle discussion pages as test fixtures
+- [x] Relevance scoring against topic keywords
+- [x] Thread discovery through the official API
 - [ ] Second source (Hugging Face Hub) to prove the source interface
 - [ ] Cutoff presets per model (`--cutoff-model ...`)

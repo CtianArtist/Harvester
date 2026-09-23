@@ -16,6 +16,30 @@ from pydantic import BaseModel, ConfigDict, Field, PositiveInt
 
 from harvester.utils import MB
 
+TOPIC_KEYWORDS = {
+    "linear algebra": [
+        "matrix", "matrices", "eigenvalue", "eigenvector", "singular value decomposition",
+        "svd", "determinant", "vector space", "least squares", "lu decomposition",
+        "qr decomposition", "sparse matrix", "linear system",
+    ],
+    "signal processing": [
+        "signal", "fft", "fourier", "spectrogram", "spectral", "wavelet", "dsp",
+        "sampling rate", "frequency domain", "eeg", "ecg", "emg", "vibration", "imu",
+        "accelerometer", "radar", "sonar",
+    ],
+    "optimization": [
+        "optimisation", "optimizer", "linear programming", "integer programming", "convex",
+        "gradient descent", "scheduling", "vehicle routing", "knapsack", "traveling salesman",
+        "travelling salesman", "tsp", "solver", "metaheuristic", "genetic algorithm",
+        "simulated annealing", "operations research", "combinatorial",
+    ],
+    "reinforcement learning": [
+        "q learning", "dqn", "ppo", "markov decision", "mdp", "reward function", "bandit",
+        "policy gradient", "actor critic", "gymnasium", "openai gym", "offline rl", "rl agent",
+        "trajectories",
+    ],
+}  # fmt: skip
+
 
 class _Strict(BaseModel):
     model_config = ConfigDict(extra="forbid")
@@ -44,12 +68,11 @@ class ScrapeSettings(_Strict):
     page_timeout_ms: PositiveInt = 30_000
     wait_for_content_ms: PositiveInt = 15_000  # how long to wait for JavaScript to draw content
     show_browser: bool = False  # True opens a visible window so you can watch it work
-    # Which parts of a thread page to save: the post with its comments, and the
-    # thread's title. Checked against kaggle.com in September 2026. If Kaggle
-    # changes its layout and you get menu text (or nothing), run
-    # `playwright codegen <a thread's URL>`, click the post, and copy the selector.
+    # Which part of a thread page to save: the post with its comments. Checked
+    # against kaggle.com in September 2026. If Kaggle changes its layout and you
+    # get menu text, run `playwright codegen <a thread's URL>`, click the post,
+    # and copy the selector it shows you.
     thread_text_selector: str = '[data-testid="discussion-detail-render-tid"]'
-    thread_title_selector: str = '[data-testid="discussions-topic-header"] h3'
 
 
 class Settings(_Strict):
@@ -69,6 +92,13 @@ class Settings(_Strict):
     # License name parts that get a dataset quarantined, matched as whole words,
     # so "NC" catches "CC-BY-NC-SA-4.0". Add "UNKNOWN" to also reject unlicensed data.
     blocked_licenses: list[str] = Field(default_factory=lambda: ["NC", "ND"])
+    # Kaggle's search is loose ("linear algebra" can return a map of schools),
+    # so each dataset is scored on its topic's keywords: 3 points for each one in
+    # the title, subtitle or tags, 1 for each one only in the description. The
+    # topic itself always counts as a keyword. See guards/relevance.py. 0 turns
+    # the check off.
+    min_relevance_score: int = Field(3, ge=0)
+    topic_keywords: dict[str, list[str]] = Field(default_factory=lambda: dict(TOPIC_KEYWORDS))
     output_dir: Path = Path("data")
     download: DownloadLimits = Field(default_factory=DownloadLimits)
     scrape: ScrapeSettings = Field(default_factory=ScrapeSettings)
@@ -76,6 +106,9 @@ class Settings(_Strict):
     @property
     def cutoff_at(self) -> datetime:
         return datetime(self.cutoff.year, self.cutoff.month, self.cutoff.day, tzinfo=UTC)
+
+    def keywords_for(self, topic: str) -> list[str]:
+        return list(dict.fromkeys([topic, *self.topic_keywords.get(topic, [])]))
 
 
 def load_settings(path: Path | None = None, overrides: dict[str, Any] | None = None) -> Settings:

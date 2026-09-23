@@ -18,6 +18,27 @@ per_topic: 5 # search results to check per topic (1-20)
 # Add UNKNOWN to also reject datasets with no license.
 blocked_licenses: [NC, ND]
 
+# Kaggle's search is loose, so each dataset is scored on its topic's keywords:
+# 3 points for each one in the title, subtitle or tags, 1 for each one only in
+# the description. The topic name always counts as a keyword. 0 turns this off.
+min_relevance_score: 3
+
+# Keywords per topic. A topic that isn't listed here uses only its own name.
+topic_keywords:
+  linear algebra: [matrix, matrices, eigenvalue, eigenvector, singular value decomposition,
+    svd, determinant, vector space, least squares, lu decomposition, qr decomposition,
+    sparse matrix, linear system]
+  signal processing: [signal, fft, fourier, spectrogram, spectral, wavelet, dsp,
+    sampling rate, frequency domain, eeg, ecg, emg, vibration, imu, accelerometer, radar,
+    sonar]
+  optimization: [optimisation, optimizer, linear programming, integer programming, convex,
+    gradient descent, scheduling, vehicle routing, knapsack, traveling salesman,
+    travelling salesman, tsp, solver, metaheuristic, genetic algorithm, simulated annealing,
+    operations research, combinatorial]
+  reinforcement learning: [q learning, dqn, ppo, markov decision, mdp, reward function,
+    bandit, policy gradient, actor critic, gymnasium, openai gym, offline rl, rl agent,
+    trajectories]
+
 output_dir: data
 
 download:
@@ -32,7 +53,6 @@ scrape:
   page_timeout_ms: 30000
   wait_for_content_ms: 15000
   show_browser: false # true opens a visible window so you can watch it work
-  # Which parts of a thread page to save. If Kaggle changes its layout, run
+  # Which part of a thread page to save (the post and its comments). If Kaggle changes its layout, run
   # `playwright codegen <a thread's URL>`, click the post, and copy the selector.
   thread_text_selector: '[data-testid="discussion-detail-render-tid"]'
-  thread_title_selector: '[data-testid="discussions-topic-header"] h3'
