@@ -7,7 +7,7 @@
 Collects **recent, niche STEM datasets** for building AI coding benchmarks that
 models can't have memorized.
 
-## Why
+## Why make this
 
 Benchmarks mined from public repositories leak. SWE-bench-style tasks come from
 public pull requests, so both the problem and its fix are likely in a model's
@@ -76,7 +76,7 @@ Checking 20 dataset(s) against the 2026-06-01 cutoff
 Done: 10 kept, 10 quarantined. Results are in data/
 ```
 
-## What live runs taught me
+## Example of what I learned
 
 Each of these passed the offline tests and only showed up against the real
 service:
